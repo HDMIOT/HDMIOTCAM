@@ -262,7 +262,7 @@ function conectarStream() {
   si.style.display = "block";
   document.getElementById("streamError").style.display = "none";
   setStatus("Conectando al stream...", "busy");
-  si.src = STREAM_URL;
+  si.src = STREAM_URL + (STREAM_URL.includes("ngrok") ? "?ngrok-skip-browser-warning=1" : "");
   si.onload  = function() { setStatus("Stream activo ✓", "ok"); };
   si.onerror = function() { setStatus("Sin conexión al stream", "error"); onStreamError(); };
 }
@@ -297,7 +297,7 @@ function switchTab(t) {
 function capturar() {
   setStatus("Capturando...", "busy");
   capturedB64 = null;
-  var url = CAPTURE_URL + "?t=" + Date.now();
+  var extra = CAPTURE_URL.includes("ngrok") ? "&ngrok-skip-browser-warning=1" : ""; var url = CAPTURE_URL + "?t=" + Date.now() + extra;
   var img = new Image();
   img.crossOrigin = "anonymous";
 
