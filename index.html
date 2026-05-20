@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDM IoT CAM — ISFT 135</title>
+<script src="https://js.puter.com/v2/"></script>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:     #0a0e17;
+    --card:   #111827;
+    --border: #1e3a5f;
+    --accent: #00d4ff;
+    --green:  #00ff9d;
+    --warn:   #ff6b35;
+    --text:   #cdd6f4;
+    --dim:    #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Exo 2', sans-serif; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%,  rgba(0,212,255,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%,rgba(0,255,157,0.04) 0%, transparent 60%);
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  header { text-align: center; margin-bottom: 24px; }
+  .badge { display: inline-block; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); border: 1px solid var(--border); padding: 4px 14px; border-radius: 20px; margin-bottom: 10px; text-transform: uppercase; }
+  h1 { font-size: clamp(22px,5vw,36px); font-weight: 800; color: #fff; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--dim); font-size: 14px; margin-top: 6px; font-weight: 300; letter-spacing: 1px; }
+
+  .statusbar { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; margin-bottom: 16px; font-family: 'Share Tech Mono', monospace; font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); flex-shrink: 0; transition: .4s; }
+  .dot.ok    { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.busy  { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 1s infinite; }
+  .dot.error { background: var(--warn);  box-shadow: 0 0 8px var(--warn); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .ip-config { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .mode-row { display: flex; gap: 8px; }
+  .mode-btn { flex: 1; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; font-family: 'Exo 2', sans-serif; cursor: pointer; transition: .2s; background: transparent; border: 1px solid var(--border); color: var(--dim); }
+  .mode-btn.active { background: rgba(0,212,255,.1); border-color: var(--accent); color: var(--accent); }
+  .config-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .config-row label { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--dim); letter-spacing: 1px; white-space: nowrap; }
+  .config-row input { flex: 1; min-width: 180px; background: #0a0e17; border: 1px solid var(--border); border-radius: 8px; color: var(--accent); font-family: 'Share Tech Mono', monospace; font-size: 13px; padding: 8px 12px; outline: none; transition: border-color .2s; }
+  .config-row input:focus { border-color: var(--accent); }
+  .hint { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--dim); line-height: 1.8; }
+  .hint span { color: var(--accent); }
+  .hint code { background: rgba(0,212,255,.08); padding: 1px 6px; border-radius: 4px; }
+  .btn-apply { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Exo 2', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 18px; cursor: pointer; transition: .2s; white-space: nowrap; }
+  .btn-apply:hover { border-color: var(--accent); color: var(--accent); }
+
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media(max-width:600px){ .panels { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .panel-header { padding: 10px 16px; font-size: 11px; font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  #streamImg { width: 100%; display: block; min-height: 200px; background: #050810; object-fit: cover; }
+  #streamError { display: none; padding: 32px 16px; text-align: center; color: var(--dim); font-size: 13px; line-height: 1.8; }
+  .placeholder-cam { min-height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: var(--dim); font-size: 13px; padding: 20px; }
+  .placeholder-cam .big { font-size: 36px; }
+
+  .buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  @media(max-width:500px){ .buttons { grid-template-columns: 1fr; } }
+  .btn { border: none; border-radius: 12px; padding: 14px 10px; font-size: 14px; font-family: 'Exo 2', sans-serif; font-weight: 700; cursor: pointer; transition: .2s; letter-spacing: .5px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #fff; }
+  .btn:hover  { transform: translateY(-2px); opacity: .9; }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn .btn-icon { font-size: 22px; }
+  .btn-cam    { background: linear-gradient(135deg,#0066cc,#00aaff); }
+  .btn-ia     { background: linear-gradient(135deg,#006644,#00cc77); }
+  .btn-recipe { background: linear-gradient(135deg,#7c2d12,#f97316); }
+
+  .ia-panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .ia-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab { flex: 1; padding: 11px; text-align: center; font-size: 12px; font-family: 'Share Tech Mono', monospace; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); cursor: pointer; transition: .2s; border: none; background: transparent; }
+  .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+  .tab-content { display: none; padding: 20px; min-height: 140px; }
+  .tab-content.active { display: block; }
+  #outputAnalisis { white-space: pre-wrap; line-height: 1.8; font-size: 15px; color: var(--text); }
+  .placeholder-ia { color: var(--dim); font-style: italic; font-size: 14px; }
+
+  .recetas-lista { display: flex; flex-direction: column; gap: 12px; }
+  .receta-card { background: #0d1520; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color .2s; }
+  .receta-card:hover { border-color: #f97316; }
+  .receta-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; cursor: pointer; gap: 12px; user-select: none; }
+  .receta-header-left { display: flex; align-items: center; gap: 12px; }
+  .receta-num { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg,#7c2d12,#f97316); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0; }
+  .receta-nombre { font-size: 15px; font-weight: 700; color: #fff; }
+  .receta-tiempo { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .receta-toggle { color: var(--dim); font-size: 16px; transition: transform .3s; flex-shrink: 0; }
+  .receta-card.open .receta-toggle { transform: rotate(180deg); }
+  .receta-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+  .receta-card.open .receta-body { display: block; }
+  .receta-section { margin-top: 14px; }
+  .receta-section-title { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .ingredientes-grid { display: flex; flex-direction: column; gap: 5px; }
+  .ingrediente { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 8px; border-radius: 6px; background: rgba(255,255,255,0.03); }
+  .ing-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .ing-dot.disponible { background: var(--green); }
+  .ing-dot.comprar    { background: var(--warn); }
+  .ing-label { flex: 1; }
+  .ing-tag { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-family: 'Share Tech Mono', monospace; letter-spacing: .5px; }
+  .ing-tag.disponible { background: rgba(0,255,157,.12); color: var(--green); }
+  .ing-tag.comprar    { background: rgba(255,107,53,.12); color: var(--warn); }
+  .pasos-lista { display: flex; flex-direction: column; gap: 8px; }
+  .paso { display: flex; gap: 10px; font-size: 13px; line-height: 1.6; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,0.03); }
+  .paso-num { width: 22px; height: 22px; border-radius: 50%; background: rgba(0,212,255,.15); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  footer { text-align: center; margin-top: 32px; color: var(--dim); font-size: 12px; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="badge">ISFT 135 · Proyecto IoT</div>
+    <h1>HDM <span>IoT</span> CAM</h1>
+    <p class="subtitle">ESP32-CAM · Visión Artificial · IA Generativa</p>
+  </header>
+
+  <div class="statusbar">
+    <div class="dot" id="statusDot"></div>
+    <span id="estadoTexto">Sistema listo</span>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="ip-config">
+    <div class="mode-row">
+      <button class="mode-btn active" id="modeLocal" onclick="setMode('local')">📶 Red local (WiFi)</button>
+      <button class="mode-btn"        id="modeNgrok" onclick="setMode('ngrok')">🌐 Ngrok (remoto)</button>
+    </div>
+
+    <!-- MODO LOCAL -->
+    <div id="configLocal" class="config-row">
+      <label>IP ESP32</label>
+      <input type="text" id="ipLocal" value="10.0.0.221" placeholder="ej: 10.0.0.221">
+      <button class="btn-apply" onclick="aplicarConfig()">Aplicar</button>
+    </div>
+
+    <!-- MODO NGROK — una sola URL, puerto 80 -->
+    <div id="configNgrok" style="display:none; flex-direction:column; gap:10px;">
+      <div class="config-row">
+        <label>URL ngrok</label>
+        <input type="text" id="ngrokURL" placeholder="https://xxxx.ngrok-free.app">
+        <button class="btn-apply" onclick="aplicarConfig()">Aplicar</button>
+      </div>
+      <div class="hint">
+        Un solo comando en la PC de la misma red que el ESP32:<br>
+        <code>ngrok http 10.0.0.221:80</code> → pegá la URL arriba<br>
+        Stream y captura viajan por el mismo túnel: <span>/stream</span> y <span>/capture</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEO + CAPTURA -->
+  <div class="panels">
+    <div class="panel">
+      <div class="panel-header">📡 STREAM EN VIVO</div>
+      <img id="streamImg" alt="Stream ESP32" onerror="onStreamError()">
+      <div id="streamError" style="padding:32px 16px;text-align:center;color:var(--dim);font-size:13px;line-height:1.8;">
+        Sin conexión al stream.<br>Verificá la URL o IP configurada.
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">📷 CAPTURA</div>
+      <div id="capturaHolder">
+        <div class="placeholder-cam">
+          <span class="big">🖼️</span>
+          Presioná CAPTURAR para tomar una foto
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTONES -->
+  <div class="buttons">
+    <button class="btn btn-cam" onclick="capturar()">
+      <span class="btn-icon">📸</span>CAPTURAR
+    </button>
+    <button class="btn btn-ia" onclick="analizarIA()" id="btnIA">
+      <span class="btn-icon">🔍</span>ANALIZAR IA
+    </button>
+    <button class="btn btn-recipe" onclick="generarRecetas()" id="btnReceta">
+      <span class="btn-icon">🍽️</span>RECETAS
+    </button>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="ia-panel">
+    <div class="ia-tabs">
+      <button class="tab active" onclick="switchTab('analisis')">🔬 ANÁLISIS</button>
+      <button class="tab"        onclick="switchTab('receta')">👨‍🍳 RECETAS</button>
+    </div>
+    <div class="tab-content active" id="tab-analisis">
+      <div id="outputAnalisis" class="placeholder-ia">El análisis aparecerá aquí después de capturar y presionar ANALIZAR IA...</div>
+    </div>
+    <div class="tab-content" id="tab-receta">
+      <div id="outputReceta" class="placeholder-ia">Las recetas aparecerán aquí. Primero analizá la imagen con IA, luego presioná RECETAS...</div>
+    </div>
+  </div>
+
+  <footer>ESP32-CAM · Puter AI v2 · IoT Vision · ISFT 135</footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  ESTADO
+// ═══════════════════════════════════════════════════
+var modo        = "local";
+var STREAM_URL  = "";
+var CAPTURE_URL = "";
+var capturedB64   = null;
+var analisisTexto = null;
+
+// Inicializar con IP por defecto — todo en puerto 80
+(function init() {
+  var ip = document.getElementById("ipLocal").value.trim();
+  STREAM_URL  = "http://" + ip + "/stream";
+  CAPTURE_URL = "http://" + ip + "/capture";
+})();
+
+// ═══════════════════════════════════════════════════
+//  MODO LOCAL / NGROK
+// ═══════════════════════════════════════════════════
+function setMode(m) {
+  modo = m;
+  document.getElementById("configLocal").style.display = m === "local" ? "flex"   : "none";
+  document.getElementById("configNgrok").style.display = m === "ngrok" ? "flex"   : "none";
+  document.getElementById("modeLocal").classList.toggle("active", m === "local");
+  document.getElementById("modeNgrok").classList.toggle("active", m === "ngrok");
+}
+
+function aplicarConfig() {
+  capturedB64   = null;
+  analisisTexto = null;
+
+  if (modo === "local") {
+    var ip = document.getElementById("ipLocal").value.trim().replace(/\/$/, "");
+    STREAM_URL  = "http://" + ip + "/stream";
+    CAPTURE_URL = "http://" + ip + "/capture";
+  } else {
+    // Ngrok: una sola URL cubre todo — puerto 80
+    var u = document.getElementById("ngrokURL").value.trim().replace(/\/$/, "");
+    STREAM_URL  = u + "/stream";
+    CAPTURE_URL = u + "/capture";
+  }
+
+  conectarStream();
+}
+
+// ═══════════════════════════════════════════════════
+//  STREAM
+// ═══════════════════════════════════════════════════
+function conectarStream() {
+  var si = document.getElementById("streamImg");
+  si.style.display = "block";
+  document.getElementById("streamError").style.display = "none";
+  setStatus("Conectando al stream...", "busy");
+  si.src = STREAM_URL;
+  si.onload  = function() { setStatus("Stream activo ✓", "ok"); };
+  si.onerror = function() { setStatus("Sin conexión al stream", "error"); onStreamError(); };
+}
+
+function onStreamError() {
+  document.getElementById("streamImg").style.display   = "none";
+  document.getElementById("streamError").style.display = "block";
+}
+
+window.addEventListener("load", conectarStream);
+
+// ═══════════════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════════════
+function setStatus(msg, tipo) {
+  document.getElementById("estadoTexto").textContent = msg;
+  var d = document.getElementById("statusDot");
+  d.className = "dot" + (tipo ? " " + tipo : "");
+}
+
+function switchTab(t) {
+  document.querySelectorAll(".tab").forEach(function(el, i) {
+    el.classList.toggle("active", (i===0 && t==="analisis") || (i===1 && t==="receta"));
+  });
+  document.getElementById("tab-analisis").classList.toggle("active", t === "analisis");
+  document.getElementById("tab-receta").classList.toggle("active",   t === "receta");
+}
+
+// ═══════════════════════════════════════════════════
+//  CAPTURAR
+// ═══════════════════════════════════════════════════
+function capturar() {
+  setStatus("Capturando...", "busy");
+  capturedB64 = null;
+  var url = CAPTURE_URL + "?t=" + Date.now();
+  var img = new Image();
+  img.crossOrigin = "anonymous";
+
+  img.onload = function() {
+    var holder = document.getElementById("capturaHolder");
+    holder.innerHTML = "";
+    var vis = new Image();
+    vis.src = url;
+    vis.style.cssText = "width:100%;display:block;border-radius:0 0 13px 13px;";
+    holder.appendChild(vis);
+    try {
+      var c = document.createElement("canvas");
+      c.width  = img.naturalWidth  || 320;
+      c.height = img.naturalHeight || 240;
+      c.getContext("2d").drawImage(img, 0, 0);
+      capturedB64 = c.toDataURL("image/jpeg", 0.85);
+      setStatus("Imagen capturada ✓ — listo para analizar", "ok");
+    } catch(e) {
+      capturedB64 = null;
+      setStatus("Canvas bloqueado — revisar CORS en el ESP32", "error");
+    }
+  };
+
+  img.onerror = function() { setStatus("Error al capturar — verificá la URL/IP", "error"); };
+  img.src = url;
+}
+
+// ═══════════════════════════════════════════════════
+//  ANALIZAR CON IA
+// ═══════════════════════════════════════════════════
+async function analizarIA() {
+  if (!capturedB64) { setStatus("Primero capturá una imagen", "error"); return; }
+  var btn = document.getElementById("btnIA");
+  btn.disabled = true;
+  setStatus("Analizando con IA...", "busy");
+  document.getElementById("outputAnalisis").innerHTML = '<span class="spinner"></span> Analizando imagen...';
+  switchTab("analisis");
+  try {
+    var r = await puter.ai.chat([{
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: capturedB64 } },
+        { type: "text", text:
+`Sos un asistente de visión artificial para una heladera inteligente.
+Analizá esta imagen y respondé en español con:
+1. Lista de alimentos e ingredientes visibles
+2. Estado aparente de cada uno (fresco, escaso, vencido)
+3. Observaciones útiles
+Sé concreto y directo.` }
+      ]
+    }], { model: "gpt-4o" });
+
+    analisisTexto = extraerTexto(r);
+    document.getElementById("outputAnalisis").textContent = analisisTexto;
+    setStatus("Análisis completado ✓ — ahora podés generar recetas", "ok");
+  } catch(err) {
+    document.getElementById("outputAnalisis").textContent = "Error: " + (err && err.message ? err.message : String(err));
+    setStatus("Error de IA", "error");
+  }
+  btn.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════
+//  GENERAR RECETAS
+// ═══════════════════════════════════════════════════
+async function generarRecetas() {
+  if (!analisisTexto) {
+    switchTab("receta");
+    document.getElementById("outputReceta").innerHTML =
+      '<p class="placeholder-ia">⚠️ Primero presioná ANALIZAR IA para detectar los ingredientes.</p>';
+    setStatus("Primero analizá la imagen", "error");
+    return;
+  }
+  var btn = document.getElementById("btnReceta");
+  btn.disabled = true;
+  setStatus("Generando recetas...", "busy");
+  document.getElementById("outputReceta").innerHTML = '<span class="spinner"></span> Pensando qué cocinar con lo que hay...';
+  switchTab("receta");
+
+  try {
+    var r = await puter.ai.chat(
+`Sos un chef creativo. Con los ingredientes de esta heladera generá 3 recetas prácticas.
+
+Ingredientes detectados:
+${analisisTexto}
+
+Respondé ÚNICAMENTE con un array JSON válido. Sin texto previo, sin backticks, sin bloques de código.
+Estructura exacta:
+[
+  {
+    "nombre": "Nombre de la receta",
+    "tiempo": "XX minutos",
+    "ingredientes": [
+      { "nombre": "ingrediente", "disponible": true },
+      { "nombre": "ingrediente que falta", "disponible": false }
+    ],
+    "pasos": ["Paso 1", "Paso 2", "Paso 3"]
+  }
+]
+"disponible": true si estaba en la heladera, false si hay que comprarlo.
+Solo el JSON, nada más.`
+    );
+
+    var texto = extraerTexto(r);
+    var limpio = texto.replace(/```json/gi,"").replace(/```/g,"").trim();
+
+    var recetas;
+    try {
+      recetas = JSON.parse(limpio);
+    } catch(e) {
+      document.getElementById("outputReceta").innerHTML =
+        '<div style="white-space:pre-wrap;font-size:14px;line-height:1.8;color:var(--text)">' + texto + '</div>';
+      setStatus("Recetas generadas ✓", "ok");
+      btn.disabled = false;
+      return;
+    }
+
+    renderRecetas(recetas);
+    setStatus(recetas.length + " recetas generadas ✓", "ok");
+  } catch(err) {
+    document.getElementById("outputReceta").textContent = "Error: " + (err && err.message ? err.message : String(err));
+    setStatus("Error al generar recetas", "error");
+  }
+  btn.disabled = false;
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDER CARDS DE RECETAS
+// ═══════════════════════════════════════════════════
+function renderRecetas(recetas) {
+  var contenedor = document.getElementById("outputReceta");
+  contenedor.innerHTML = "";
+  var lista = document.createElement("div");
+  lista.className = "recetas-lista";
+
+  recetas.forEach(function(rec, idx) {
+    var card = document.createElement("div");
+    card.className = "receta-card";
+
+    var header = document.createElement("div");
+    header.className = "receta-header";
+    header.innerHTML =
+      '<div class="receta-header-left">' +
+        '<div class="receta-num">' + (idx+1) + '</div>' +
+        '<div>' +
+          '<div class="receta-nombre">' + rec.nombre + '</div>' +
+          '<div class="receta-tiempo">&#9201; ' + (rec.tiempo || "—") + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="receta-toggle">&#9660;</div>';
+    header.onclick = function() { card.classList.toggle("open"); };
+
+    var body = document.createElement("div");
+    body.className = "receta-body";
+
+    var ings  = rec.ingredientes || [];
+    var disp  = ings.filter(function(i){ return i.disponible; }).length;
+    var falta = ings.filter(function(i){ return !i.disponible; }).length;
+
+    var ingHTML =
+      '<div class="receta-section">' +
+        '<div class="receta-section-title">' +
+          'Ingredientes' +
+          ' <span style="color:var(--green);margin-left:8px">&#10003; ' + disp + ' en heladera</span>' +
+          (falta > 0 ? ' <span style="color:var(--warn);margin-left:6px">&#128722; ' + falta + ' a comprar</span>' : '') +
+        '</div>' +
+        '<div class="ingredientes-grid">';
+    ings.forEach(function(ing) {
+      var cls = ing.disponible ? "disponible" : "comprar";
+      var tag = ing.disponible ? "en heladera" : "comprar";
+      ingHTML += '<div class="ingrediente"><div class="ing-dot ' + cls + '"></div><span class="ing-label">' + ing.nombre + '</span><span class="ing-tag ' + cls + '">' + tag + '</span></div>';
+    });
+    ingHTML += '</div></div>';
+
+    var pasosHTML =
+      '<div class="receta-section">' +
+        '<div class="receta-section-title">Preparaci&#243;n</div>' +
+        '<div class="pasos-lista">';
+    (rec.pasos || []).forEach(function(paso, i) {
+      pasosHTML += '<div class="paso"><div class="paso-num">' + (i+1) + '</div><div>' + paso + '</div></div>';
+    });
+    pasosHTML += '</div></div>';
+
+    body.innerHTML = ingHTML + pasosHTML;
+    card.appendChild(header);
+    card.appendChild(body);
+    lista.appendChild(card);
+  });
+
+  contenedor.appendChild(lista);
+}
+
+// ═══════════════════════════════════════════════════
+//  HELPER
+// ═══════════════════════════════════════════════════
+function extraerTexto(r) {
+  if (typeof r === "string") return r;
+  return (r && r.message && r.message.content)
+      || (r && r.content && r.content[0] && r.content[0].text)
+      || JSON.stringify(r, null, 2);
+}
+</script>
+</body>
+</html>
